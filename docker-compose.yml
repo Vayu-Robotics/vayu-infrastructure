@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  airflow:
+    image: vayurobotics/vayu-infrastructure  # Use the latest compatible Airflow image
+    container_name: vayu-infrastructure
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False  # Don't load example DAGs
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor  
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False  # Make sure DAG is not paused on creation
+    volumes:
+      - /code/vayu-infrastructure/src/airflow_dags/:/usr/local/airflow/dags  # Mount the directory where your DAG script is located
+      - /data:/data  # Mount the directory where your data is located
+    ports:
+      - "8080:8080"  # Expose Airflow Web UI on port 8080
+    entrypoint: ["airflow", "standalone"]  # Start Airflow standalone instance
+    # entrypoint: /bin/bash
+    tty: true
+    network_mode: host
+    privileged: true 
