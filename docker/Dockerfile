@@ -1,5 +1,5 @@
 # Base image for aarch64 architecture
-FROM --platform=linux/arm64 ubuntu:22.04
+FROM ubuntu:22.04
 
 # Set environment variables
 ENV AIRFLOW_HOME=/usr/local/airflow \
@@ -34,19 +34,14 @@ RUN pip3 install --upgrade pip setuptools wheel \
 
 # https://stackoverflow.com/questions/77490435/attributeerror-cython-sources
 # Build cython and PyYaml to resolve issue refer'd above
-RUN pip3 install "cython<3.0.0" wheel --root-user-action=ignore
+RUN pip3 install "cython<3.0.0" wheel --root-user-action=ignore \
+    && pip3 install pyyaml==5.4.1 --no-build-isolation
 
 # Create a new directory where the requirements file will be copied
 WORKDIR /lib
-
 COPY requirements.txt /lib/requirements.txt
 
-RUN pip3 install pyyaml==5.4.1 --no-build-isolation
-
-# Install pendulum
+# Install other requirements
 RUN pip3 install --use-deprecated=legacy-resolver -r /lib/requirements.txt
 
 RUN ln -snf /usr/share/zoneinfo/UTC /etc/localtime && echo "UTC" > /etc/timezone
-
-# Install network manager
-RUN apt-get update && apt-get install -y network-manager
