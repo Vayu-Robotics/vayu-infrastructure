@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     ca-certificates \
     curl \
+    iproute2 \
     libssl-dev \
     libffi-dev \
     libmysqlclient-dev \
