@@ -2,20 +2,27 @@ version: '3.8'
 
 services:
   airflow:
-    image: vayurobotics/vayu-infrastructure  # Use the latest compatible Airflow image
+    image: vayurobotics/vayu-infrastructure
+    # build: 
+    #   context: .  # Path to your Dockerfile (current directory)
+    #   dockerfile: Dockerfile  # The name of your Dockerfile
     container_name: vayu-infrastructure
     environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor  # Use LocalExecutor
       - AIRFLOW__CORE__LOAD_EXAMPLES=False  # Don't load example DAGs
-      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor  
-      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False  # Make sure DAG is not paused on creation
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False  # Ensure DAGs are not paused
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://robot_user:robot_pass@localhost:5432/robot_db  # PostgreSQL connection string
+      - POSTGRES_USER=robot_user  # PostgreSQL user (for the database)
+      - POSTGRES_PASSWORD=robot_pass  # PostgreSQL password
+      - POSTGRES_DB=robot_db  # PostgreSQL database name
     volumes:
-      - ./src/airflow_dags/:/usr/local/airflow/dags  # Mount the directory where your DAG script is located
-      - /data:/data  # Mount the directory where your data is located
-      - ./src/database_utils:/src/database_utils  # Mount the directory where your database_utils is located
+      - ./src/airflow_dags/:/usr/local/airflow/dags  # Mount your DAGs directory
+      - /data:/data  # Mount the data directory
+      - ./src/database_utils:/src/database_utils  # Mount your database utilities
+      - ./pgdata:/var/lib/postgresql/data  # Persist PostgreSQL data
     ports:
       - "8080:8080"  # Expose Airflow Web UI on port 8080
-    entrypoint: ["airflow", "standalone"]  # Start Airflow standalone instance
-    # entrypoint: /bin/bash
+      - "5432:5432"  # Expose PostgreSQL on port 5432
+    entrypoint: /entrypoint.sh  # Use the custom entrypoint to start services
     tty: true
-    # network_mode: host
     privileged: true

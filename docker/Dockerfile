@@ -33,8 +33,7 @@ RUN pip3 install --upgrade pip setuptools wheel \
     && pip3 install apache-airflow==${AIRFLOW_VERSION} \
     && pip3 install apache-airflow[postgres,mysql,celery,redis] 
 
-# https://stackoverflow.com/questions/77490435/attributeerror-cython-sources
-# Build cython and PyYaml to resolve issue refer'd above
+# Fix Cython and PyYAML issue
 RUN pip3 install "cython<3.0.0" wheel --root-user-action=ignore \
     && pip3 install pyyaml==5.4.1 --no-build-isolation
 
@@ -46,15 +45,13 @@ COPY requirements.txt /lib/requirements.txt
 RUN pip3 install --use-deprecated=legacy-resolver -r /lib/requirements.txt
 RUN ln -snf /usr/share/zoneinfo/UTC /etc/localtime && echo "UTC" > /etc/timezone
 
-# Postgres deps
-# Set environment variables (credentials in plaintext for development)
-# TODO: (Suyash) Use secrets management for production
+# Postgres environment variables
 ENV POSTGRES_DB=robot_db \
     POSTGRES_USER=robot_user \
     POSTGRES_PASSWORD=robot_pass \
     POSTGRES_HOST=localhost
 
-# Install necessary dependencies including PostgreSQL and Python
+# Install PostgreSQL and its dependencies
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
     postgresql \
     postgresql-contrib \
@@ -65,3 +62,13 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-ins
 RUN service postgresql start && \
     su - postgres -c "psql --command \"CREATE USER ${POSTGRES_USER} WITH SUPERUSER PASSWORD '${POSTGRES_PASSWORD}';\"" && \
     su - postgres -c "createdb -O ${POSTGRES_USER} ${POSTGRES_DB}"
+
+# Expose necessary ports
+EXPOSE 8080 5432
+
+# Add a script to start PostgreSQL and Airflow
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Use the custom entrypoint script to start services
+ENTRYPOINT ["/entrypoint.sh"]
