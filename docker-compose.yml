@@ -24,7 +24,7 @@ services:
     ports:
       - "8080:8080"  # Expose Airflow Web UI on port 8080
       - "5432:5432"  # Expose PostgreSQL on port 5432
-    # entrypoint: /entrypoint.sh  # Use the custom entrypoint to start services
-    entrypoint: /bin/bash  # Use the custom entrypoint to start services
+    entrypoint: /entrypoint.sh  # Use the custom entrypoint to start services
+    # entrypoint: /bin/bash  # Use the custom entrypoint to start services
     tty: true
     privileged: true

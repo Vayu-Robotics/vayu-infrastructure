@@ -21,7 +21,7 @@ default_args = {
 
 # Define your DAG
 with DAG(
-    'debug_dag',
+    'upload_sync_dag',
     default_args=default_args,
     schedule_interval=None,  # No automatic scheduling, trigger manually for debugging
     catchup=False,  # Avoid backfilling previous runs
