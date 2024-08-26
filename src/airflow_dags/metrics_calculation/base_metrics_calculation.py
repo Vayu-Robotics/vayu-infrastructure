@@ -14,13 +14,17 @@ import utm
 from mcap.reader import make_reader
 from mcap_ros2.reader import read_ros2_messages
 from tqdm import tqdm
-import psychopg2
+from dataclasses import dataclass
+# import psychopg2
 @dataclass
 class Metric:
     metric_name: str
     value: float
     bag_file_name: str
     robot_name: str
+
+    def __str__(self):
+        return f"Metric: {self.metric_name}, Value: {self.value}, Bag: {self.bag_file_name}, Robot: {self.robot_name}"
 
 
 class MetricsCalculation:
@@ -44,14 +48,6 @@ class MetricsCalculation:
 
         for metric in metrics:
             try:
-                # Connect to PostgreSQL
-                conn = psycopg2.connect(conn_str)
-                cur = conn.cursor()
-
-                # Execute the table creation query
-                cur.execute(create_table_query)
-                conn.commit()
-
                 # Insert initial records (if needed)
                 cur.execute(f"""
                 INSERT INTO robots (robot_name, bag_name, mileage) 
@@ -62,12 +58,18 @@ class MetricsCalculation:
                 cur.close()
                 conn.close()
 
-         except Exception as e:
-        print(f"Error creating table: {e}")
+            except Exception as e:
+                print(f"Error creating table: {e}")
 
-    def compute_metrics(bags : List):
-        pass
-    
+    def compute_metrics(self, bags : List):
+        metrics = []
+        for bag in bags:
+            for metric_name, metric_class in self.metric_class_dict.items():
+                metric = metric_class.compute(bag)
+                metric_obj = Metric(metric_name=metric_name, value=metric["value"], bag_file_name=bag, robot_name="test_robot")
+                # TODO: Add robot name to the metric object
+                metrics.append(metric)
+        return metrics
 
 
 class BaseMetricCalculation:

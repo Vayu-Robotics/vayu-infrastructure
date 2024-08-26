@@ -6,6 +6,9 @@ from datetime import datetime, timedelta
 import yaml
 import pytz
 
+from airflow_dags.metrics_calculation.base_metrics_calculation import MetricsCalculation
+from airflow_dags.metrics_calculation.parse_gps_data import CalculateMileage
+
 # Default arguments for the DAG
 default_args = {
     'depends_on_past': False,  # DAG tasks don't depend on previous runs
@@ -15,8 +18,8 @@ default_args = {
 }
 
 BASE_BAG_DIR = "/data/nas0/data_collects/rosbags"
-PRODUCTION_BAG_DIRS = [os.path.join(BASE_BAG_DIR, "djarin-4")]
-SYNC_DATA_FILE = "/home/arul/code/vayu-infrastructure/sync_data.yaml"
+PRODUCTION_BAG_DIRS = [os.path.join(BASE_BAG_DIR, "infrastructure-test")]
+SYNC_DATA_FILE = "/data/nas0/data_collects/rosbags/sync_data.yaml"
 
 # Function to read the last synced time from a YAML file
 def read_last_synced_time(file_path='sync_data.yaml'):
@@ -34,6 +37,7 @@ def read_last_synced_time(file_path='sync_data.yaml'):
 # Function to get all directories newer than the last synced time from multiple base paths
 def get_new_directories(base_paths, sync_file='sync_data.yaml'):
     last_synced_time = read_last_synced_time(sync_file)
+    print(f"Last synced time: {last_synced_time}")
     new_directories = []
     current_time = datetime.now(pytz.UTC)
 
@@ -88,33 +92,37 @@ with DAG(
     )
 
     new_time = datetime.now()
-    # Task 2: Run a metrics with the new directories as input
-    # TODO(suyash): Replace the placeholder script with the actual script
-    def run_script_with_directories(**kwargs):
-        # Get the directories from XCom
+
+    # Task 2: Run a metrics with the new directories as input    
+    def run_metrics_on_bags(**kwargs):
+        test_config = {
+            "mileage": CalculateMileage(),
+        }
+
         new_directories = kwargs['ti'].xcom_pull(task_ids='find_new_directories')
         if new_directories:
-            # Join the directories into a single string separated by spaces
-            directories_str = ' '.join(new_directories)
-            # Example: replace 'your_script.sh' with the path to your script
-            os.system(f'bash your_script.sh {directories_str}')
+            metrics_calculator = MetricsCalculation(test_config)
+            metrics = metrics_calculator.compute_metrics(new_directories)
+            print(f"Metrics computed: {metrics}")
+            metrics_calculator.write_metrics_to_db(metrics)
+            
         else:
             print("No new directories found.")
 
     run_script = PythonOperator(
         task_id='run_script',
-        python_callable=run_script_with_directories,
+        python_callable=run_metrics_on_bags,
         provide_context=True
     )
 
-
     # Task 3: Update the last synced time in the sync_data.yaml file
+    # TODO(arul): this should only be done if the previous tasks are successful
     update_sync_time = PythonOperator(
         task_id='update_sync_time',
         python_callable=update_last_synced_time,
         op_kwargs={
             'new_time': new_time,
-            'file_path': 'sync_data.yaml'
+            'file_path': SYNC_DATA_FILE
         }
     )
 
