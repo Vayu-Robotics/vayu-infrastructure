@@ -14,6 +14,13 @@ import utm
 from mcap.reader import make_reader
 from mcap_ros2.reader import read_ros2_messages
 from tqdm import tqdm
+import psychopg2
+@dataclass
+class Metric:
+    metric_name: str
+    value: float
+    bag_file_name: str
+    robot_name: str
 
 
 class MetricsCalculation:
@@ -23,9 +30,40 @@ class MetricsCalculation:
         # metric_class should be a subclass of BaseMetricCalculation
         self.metric_class_dict = metric_class_dict
     
-    def write_metrics_to_db(self, metrics):
+    def write_metrics_to_db(self, metrics : List[Metric]):
         # Use psychopg2 to write metrics to the database
-        NotImplementedError
+        # Write the metric to the database
+        # Schema
+        '''
+        cur.execute("""
+        INSERT INTO robots (robot_name, bag_name, mileage) 
+        VALUES ('robot1', 'bag1', 100)
+        ON CONFLICT DO NOTHING;
+        """)
+        '''
+
+        for metric in metrics:
+            try:
+                # Connect to PostgreSQL
+                conn = psycopg2.connect(conn_str)
+                cur = conn.cursor()
+
+                # Execute the table creation query
+                cur.execute(create_table_query)
+                conn.commit()
+
+                # Insert initial records (if needed)
+                cur.execute(f"""
+                INSERT INTO robots (robot_name, bag_name, mileage) 
+                VALUES ({metric.robot_name}, {metric.bag_file_name}, {metric.value})
+                ON CONFLICT DO NOTHING;
+                """)
+                conn.commit()
+                cur.close()
+                conn.close()
+
+         except Exception as e:
+        print(f"Error creating table: {e}")
 
     def compute_metrics(bags : List):
         pass
