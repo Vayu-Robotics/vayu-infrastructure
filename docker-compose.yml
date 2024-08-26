@@ -15,14 +15,16 @@ services:
       - POSTGRES_USER=robot_user  # PostgreSQL user (for the database)
       - POSTGRES_PASSWORD=robot_pass  # PostgreSQL password
       - POSTGRES_DB=robot_db  # PostgreSQL database name
+      - PYTHONPATH=/src
     volumes:
       - ./src/airflow_dags/:/usr/local/airflow/dags  # Mount your DAGs directory
       - /data:/data  # Mount the data directory
-      - ./src/database_utils:/src/database_utils  # Mount your database utilities
       - ./pgdata:/var/lib/postgresql/data  # Persist PostgreSQL data
+      - ./src/:/src
     ports:
       - "8080:8080"  # Expose Airflow Web UI on port 8080
       - "5432:5432"  # Expose PostgreSQL on port 5432
-    entrypoint: /entrypoint.sh  # Use the custom entrypoint to start services
+    # entrypoint: /entrypoint.sh  # Use the custom entrypoint to start services
+    entrypoint: /bin/bash  # Use the custom entrypoint to start services
     tty: true
     privileged: true
