@@ -16,6 +16,7 @@ services:
       - POSTGRES_PASSWORD=robot_pass  # PostgreSQL password
       - POSTGRES_DB=robot_db  # PostgreSQL database name
       - PYTHONPATH=/src
+      - STABLE_WIFI_SSID=${STABLE_WIFI_SSID}
     volumes:
       - ./src/airflow_dags/:/usr/local/airflow/dags  # Mount your DAGs directory
       - /data:/data  # Mount the data directory

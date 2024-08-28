@@ -37,7 +37,7 @@ with DAG(
     rsync_to_nas = BashOperator(
         task_id='rsync_to_nas',
         bash_command="""
-        rsync -avz --no-perms --no-owner --no-group /data/collects/artifacts /data/nas0/data_collects/testing
+        rsync -avz --no-perms --no-owner --no-group /data/collects/artifacts nas0:/data_collects/testing
         """,
     )
 

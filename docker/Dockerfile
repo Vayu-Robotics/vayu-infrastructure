@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rsync \
     iputils-ping \
     default-libmysqlclient-dev \
+    wireless-tools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
