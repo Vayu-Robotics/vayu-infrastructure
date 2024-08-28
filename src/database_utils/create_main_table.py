@@ -14,10 +14,10 @@ conn_str = f"dbname={db_name} user={db_user} password={db_password} host={db_hos
 def create_table():
     # SQL query to create the 'robots' table
     create_table_query = """
-    CREATE TABLE IF NOT EXISTS robots (
+    CREATE TABLE IF NOT EXISTS test_robots (
         uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         robot_name VARCHAR(100),
-        bag_name VARCHAR(100),
+        bag_name VARCHAR(10000),
         mileage REAL,
         data_sync TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -33,7 +33,7 @@ def create_table():
 
         # Insert initial records (if needed)
         cur.execute("""
-        INSERT INTO robots (robot_name, bag_name, mileage) 
+        INSERT INTO test_robots (robot_name, bag_name, mileage) 
         VALUES ('robot1', 'bag1', 100)
         ON CONFLICT DO NOTHING;
         """)

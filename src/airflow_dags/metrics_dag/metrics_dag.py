@@ -105,7 +105,7 @@ with DAG(
             metrics = metrics_calculator.compute_metrics(new_directories)
             print(f"Metrics computed: {metrics}")
             metrics_calculator.write_metrics_to_db(metrics)
-            
+            print("Updated the database!!")
         else:
             print("No new directories found.")
 

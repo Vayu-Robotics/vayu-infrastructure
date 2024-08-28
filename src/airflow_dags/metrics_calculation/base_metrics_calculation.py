@@ -8,14 +8,26 @@
 from math import isnan
 from pathlib import Path
 from typing import List
-import numpy as np
-import rdp
-import utm
+import os
 from mcap.reader import make_reader
 from mcap_ros2.reader import read_ros2_messages
 from tqdm import tqdm
 from dataclasses import dataclass
-# import psychopg2
+import psycopg2
+
+# Note all the errors which should lead to the `calculate metrics node to crash` should
+# have unhandled excpetions.
+
+class MetricsCalculationErrorException(Exception):
+    def __init__(self, message="An error occured while trying to compute the metric."):
+        self.message = message
+        super().__init__(self.message)
+
+class MetricsCalculationDatabaseException(Exception):
+    def __init__(self, message="Exception occured trying to persist the metrics to the database.") -> None:
+        self.message = message
+        super().__init__(self.message)
+
 @dataclass
 class Metric:
     metric_name: str
@@ -33,6 +45,41 @@ class MetricsCalculation:
         # Dict of {metric_name: metric_class}/
         # metric_class should be a subclass of BaseMetricCalculation
         self.metric_class_dict = metric_class_dict
+
+        self._init_database()
+
+    
+    def _init_database(self):
+        """ Initializes connection to the database. """
+        # Get environment variables for database credentials
+        db_name = os.getenv("POSTGRES_DB")
+        db_user = os.getenv("POSTGRES_USER")
+        db_password = os.getenv("POSTGRES_PASSWORD")
+        db_host = os.getenv("POSTGRES_HOST", "localhost")  # default is localhost
+        self._conn_str = f"dbname={db_name} user={db_user} password={db_password} host={db_host}"
+
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS test_robots (
+            uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            robot_name VARCHAR(100),
+            bag_name VARCHAR(10000),
+            mileage REAL,
+            data_sync TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+        try:
+            # Connect to PostgreSQL
+            conn = psycopg2.connect(self._conn_str)
+            cur = conn.cursor()
+
+            # Execute the table creation query
+            cur.execute(create_table_query)
+            conn.commit()
+        except:
+            raise MetricsCalculationDatabaseException()
+        finally:
+            cur.close()
+            conn.close()
     
     def write_metrics_to_db(self, metrics : List[Metric]):
         # Use psychopg2 to write metrics to the database
@@ -48,27 +95,35 @@ class MetricsCalculation:
 
         for metric in metrics:
             try:
+                # Connect to PostgreSQL
+                conn = psycopg2.connect(self._conn_str)
+                cur = conn.cursor()
+
                 # Insert initial records (if needed)
-                cur.execute(f"""
-                INSERT INTO robots (robot_name, bag_name, mileage) 
-                VALUES ({metric.robot_name}, {metric.bag_file_name}, {metric.value})
-                ON CONFLICT DO NOTHING;
-                """)
+                cur.execute("""
+                    INSERT INTO test_robots (robot_name, bag_name, mileage)
+                    VALUES (%s, %s, %s)
+                """, (metric.robot_name, metric.bag_file_name, metric.value))
+                
                 conn.commit()
                 cur.close()
                 conn.close()
 
             except Exception as e:
                 print(f"Error creating table: {e}")
+                raise MetricsCalculationDatabaseException()
 
     def compute_metrics(self, bags : List):
         metrics = []
         for bag in bags:
             for metric_name, metric_class in self.metric_class_dict.items():
-                metric = metric_class.compute(bag)
-                metric_obj = Metric(metric_name=metric_name, value=metric["value"], bag_file_name=bag, robot_name="test_robot")
+                try:
+                    metric = metric_class.compute(bag)
+                except:
+                    raise MetricsCalculationErrorException()
+                metric_obj : Metric = Metric(metric_name=metric_name, value=metric["value"], bag_file_name=bag, robot_name="test_robot")
                 # TODO: Add robot name to the metric object
-                metrics.append(metric)
+                metrics.append(metric_obj)
         return metrics
 
 
