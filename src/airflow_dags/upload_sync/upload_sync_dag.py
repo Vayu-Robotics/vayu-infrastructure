@@ -1,7 +1,8 @@
+import subprocess
 from airflow import DAG
 from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
-
 # Define your DAG's default arguments
 # default_args = {
 #     'depends_on_past': False,
@@ -10,6 +11,12 @@ from datetime import datetime, timedelta
 #     'retry_delay': timedelta(minutes=5),
 # }
 
+
+def check_wifi_connection():
+    result = subprocess.run(['python3', '/src/airflow_dags/upload_sync/check_wifi_connection.py'], capture_output=True, text=True)
+    print(result.stdout)
+    if result.returncode != 0:
+        raise Exception(f"WiFi connection check failed: {result.stderr}")
 
 # Default arguments for the DAG
 default_args = {
@@ -28,9 +35,15 @@ with DAG(
 ) as dag:
 
     # Task 1: Check for wired Ethernet connection
-    check_wired_connection = BashOperator(
-        task_id='check_wired_connection',
-        bash_command='./check_wired_connection.sh',
+    # check_wired_connection = BashOperator(
+    #     task_id='check_wired_connection',
+    #     bash_command='./check_wired_connection.sh',
+    # )
+
+    # Task 2: Check WiFi connection using a Python script
+    check_wifi_connection_task = PythonOperator(
+        task_id='check_wifi_connection',
+        python_callable=check_wifi_connection,
     )
 
     # Task 2: Rsync between local folder and NAS
