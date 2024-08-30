@@ -3,29 +3,32 @@ version: '3.8'
 services:
   airflow:
     image: vayurobotics/vayu-infrastructure
-    # build: 
-    #   context: .  # Path to your Dockerfile (current directory)
-    #   dockerfile: Dockerfile  # The name of your Dockerfile
     container_name: vayu-infrastructure
     environment:
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor  # Use LocalExecutor
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False  # Don't load example DAGs
-      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False  # Ensure DAGs are not paused
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://robot_user:robot_pass@localhost:5432/robot_db  # PostgreSQL connection string
-      - POSTGRES_USER=robot_user  # PostgreSQL user (for the database)
-      - POSTGRES_PASSWORD=robot_pass  # PostgreSQL password
-      - POSTGRES_DB=robot_db  # PostgreSQL database name
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://robot_user:robot_pass@localhost:5432/robot_db
+      - POSTGRES_USER=robot_user
+      - POSTGRES_PASSWORD=robot_pass
+      - POSTGRES_DB=robot_db
       - PYTHONPATH=/src
       - STABLE_WIFI_SSID=${STABLE_WIFI_SSID}
     volumes:
-      - ./src/airflow_dags/:/usr/local/airflow/dags  # Mount your DAGs directory
-      - /data:/data  # Mount the data directory
-      - ./pgdata:/var/lib/postgresql/data  # Persist PostgreSQL data
+      - ./src/airflow_dags/:/usr/local/airflow/dags
+      - /data:/data
+      - ./pgdata:/var/lib/postgresql/data
       - ./src/:/src
     ports:
-      - "8080:8080"  # Expose Airflow Web UI on port 8080
-      - "5432:5432"  # Expose PostgreSQL on port 5432
-    entrypoint: /entrypoint.sh  # Use the custom entrypoint to start services
-    # entrypoint: /bin/bash  # Use the custom entrypoint to start services
+      - "8080:8080"
+      - "5432:5432"
+    entrypoint: /entrypoint.sh
     tty: true
     privileged: true
+    network_mode: "host"
+    # networks:
+    #   - vayu-infrastructure_default
+
+# networks:
+#   vayu-infrastructure_default:
+#     external: true

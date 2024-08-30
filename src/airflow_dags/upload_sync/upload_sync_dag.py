@@ -1,4 +1,5 @@
 import subprocess
+import socket
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
@@ -20,37 +21,32 @@ def check_wifi_connection():
 
 # Default arguments for the DAG
 default_args = {
-    'depends_on_past': False,  # DAG tasks don't depend on previous runs
-    'start_date': datetime(2023, 1, 1),  # Fixed start date in the past
-    'retries': 1,  # Number of retries in case of failure
-    'retry_delay': timedelta(minutes=5),  # Time between retries
+    'depends_on_past': False,
+    'start_date': datetime(2024, 8, 20),
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
 }
 
 # Define your DAG
 with DAG(
     'upload_sync_dag',
     default_args=default_args,
-    schedule_interval=None,  # No automatic scheduling, trigger manually for debugging
+    schedule_interval='0 0 * * *',  # No automatic scheduling, trigger manually for debugging
     catchup=False,  # Avoid backfilling previous runs
 ) as dag:
 
-    # Task 1: Check for wired Ethernet connection
-    # check_wired_connection = BashOperator(
-    #     task_id='check_wired_connection',
-    #     bash_command='./check_wired_connection.sh',
-    # )
-
-    # Task 2: Check WiFi connection using a Python script
+    # Task 1: Check WiFi connection using a Python script
     check_wifi_connection_task = PythonOperator(
         task_id='check_wifi_connection',
         python_callable=check_wifi_connection,
     )
 
+    hostname : str = socket.gethostname()
     # Task 2: Rsync between local folder and NAS
     rsync_to_nas = BashOperator(
         task_id='rsync_to_nas',
-        bash_command="""
-        rsync -avz --no-perms --no-owner --no-group /data/collects/artifacts nas0:/data_collects/testing
+        bash_command=f"""
+        rsync -P -rltv --no-o --no-g /data/collects/ rsync://100.108.48.87:30026/robot_rosbags/{hostname}
         """,
     )
 
@@ -61,7 +57,7 @@ with DAG(
     )
 
     # Define the order of execution
-    check_wired_connection >> rsync_to_nas >> delete_local_folder
+    check_wifi_connection_task >> rsync_to_nas >> delete_local_folder
 
 
 # vayu-infrastructure  | standalone | Login with username: admin  password: vdtN5C6DqTvkXPYX
