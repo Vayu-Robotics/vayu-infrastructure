@@ -26,9 +26,3 @@ services:
     tty: true
     privileged: true
     network_mode: "host"
-    # networks:
-    #   - vayu-infrastructure_default
-
-# networks:
-#   vayu-infrastructure_default:
-#     external: true

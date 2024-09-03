@@ -129,4 +129,3 @@ with DAG(
     # Define the order of execution
     find_new_directories >> run_script >> update_sync_time
 
-# vayu-infrastructure  | standalone | Login with username: admin  password: vdtN5C6DqTvkXPYX

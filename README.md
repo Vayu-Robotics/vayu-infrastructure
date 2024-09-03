@@ -15,3 +15,8 @@
 2. Login to the databse : ```psql -h localhost -U robot_user -d robot_db```
 3. Enter the password: ```robot_pass```
 4. Run your queries when you are inside the psql shell.
+
+# Sample Queries
+- List all tables: ``\dt``
+- Select entries at time of interest: ``SELECT * FROM your_table WHERE start_time BETWEEN '2024-09-01 00:00:00' AND '2024-09-01 23:59:59';``
+
