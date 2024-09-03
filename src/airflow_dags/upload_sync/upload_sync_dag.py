@@ -22,7 +22,7 @@ def check_wifi_connection():
 # Default arguments for the DAG
 default_args = {
     'depends_on_past': False,
-    'start_date': datetime(2024, 8, 20),
+    'start_date': datetime(2024, 9, 4),
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
