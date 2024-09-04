@@ -72,11 +72,12 @@ class MetricsCalculation:
         )
 
         create_table_query = """
-        CREATE TABLE IF NOT EXISTS test_robots_ts_dis (
+        CREATE TABLE IF NOT EXISTS test_robots_ts_with_au_1 (
             uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             robot_name VARCHAR(100),
-            bag_name VARCHAR(10000),
-            mileage REAL,
+            bag_name VARCHAR(10000) UNIQUE,
+            mileage REAL DEFAULT 0.0,
+            autonomy_mileage REAL DEFAULT 0.0,
             data_sync TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             start_time TIMESTAMP,
             end_time TIMESTAMP,
@@ -124,7 +125,7 @@ class MetricsCalculation:
                 #     (metric.robot_name, metric.bag_file_name, metric.value, metric.start_time, metric.end_time),
                 # )
                 query = f"""
-                    INSERT INTO test_robots_ts_dis (robot_name, bag_name, {metric.metric_name}, start_time, end_time)
+                    INSERT INTO test_robots_ts_with_au_1 (robot_name, bag_name, {metric.metric_name}, start_time, end_time)
                     VALUES (%s, %s, %s, %s, %s)
                     ON CONFLICT (bag_name) 
                     DO UPDATE SET
@@ -166,7 +167,7 @@ class MetricsCalculation:
                         start_time=time_dict["start_time"],
                         end_time=time_dict["end_time"],
                     )
-                metrics.append(metric_obj)
+                    metrics.append(metric_obj)
         return metrics
 
 
