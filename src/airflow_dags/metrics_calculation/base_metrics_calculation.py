@@ -7,7 +7,7 @@
 
 from math import isnan
 from pathlib import Path
-from typing import List
+from typing import List, Union
 import os
 from mcap.reader import make_reader
 from mcap_ros2.reader import read_ros2_messages
@@ -18,7 +18,6 @@ import datetime
 
 # Note all the errors which should lead to the `calculate metrics node to crash` should
 # have unhandled excpetions.
-
 
 class MetricsCalculationErrorException(Exception):
     def __init__(self, message="An error occured while trying to compute the metric."):
@@ -37,7 +36,7 @@ class MetricsCalculationDatabaseException(Exception):
 @dataclass
 class Metric:
     metric_name: str
-    value: float
+    value: Union[List, float]
     bag_file_name: str
     robot_name: str
     start_time: datetime = None
@@ -55,6 +54,11 @@ class MetricsCalculation:
         self.metric_class_dict = metric_class_dict
         self._metric_calculation_driver = MetricCalculationDriver(metric_class_dict)
         self._init_database()
+        
+    
+    def _get_robot_name(self, bag_file_name: str) -> str:
+        """ TODO: Is there a better way to get the robot name from the bag file name? """
+        return bag_file_name.split("/")[5]
 
     def _init_database(self):
         """Initializes connection to the database."""
@@ -68,14 +72,15 @@ class MetricsCalculation:
         )
 
         create_table_query = """
-        CREATE TABLE IF NOT EXISTS test_robots_ts (
+        CREATE TABLE IF NOT EXISTS test_robots_ts_dis (
             uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             robot_name VARCHAR(100),
             bag_name VARCHAR(10000),
             mileage REAL,
             data_sync TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             start_time TIMESTAMP,
-            end_time TIMESTAMP
+            end_time TIMESTAMP,
+            disengagements TIMESTAMP[] DEFAULT '{}'
         );
         """
         try:
@@ -111,14 +116,27 @@ class MetricsCalculation:
                 cur = conn.cursor()
 
                 # Insert initial records (if needed)
-                cur.execute(
-                    """
-                    INSERT INTO test_robots_ts (robot_name, bag_name, mileage, start_time, end_time)
+                # cur.execute(
+                #     """
+                #     INSERT INTO test_robots_ts_dis (robot_name, bag_name, mileage, start_time, end_time)
+                #     VALUES (%s, %s, %s, %s, %s)
+                # """,
+                #     (metric.robot_name, metric.bag_file_name, metric.value, metric.start_time, metric.end_time),
+                # )
+                query = f"""
+                    INSERT INTO test_robots_ts_dis (robot_name, bag_name, {metric.metric_name}, start_time, end_time)
                     VALUES (%s, %s, %s, %s, %s)
-                """,
-                    (metric.robot_name, metric.bag_file_name, metric.value, metric.start_time, metric.end_time),
+                    ON CONFLICT (bag_name) 
+                    DO UPDATE SET
+                        robot_name = EXCLUDED.robot_name,
+                        {metric.metric_name} = EXCLUDED.{metric.metric_name},
+                        start_time = EXCLUDED.start_time,
+                        end_time = EXCLUDED.end_time;
+                """
+                cur.execute(
+                    query,
+                    (metric.robot_name, metric.bag_file_name, metric.value, metric.start_time, metric.end_time)
                 )
-
                 conn.commit()
                 cur.close()
                 conn.close()
@@ -131,6 +149,8 @@ class MetricsCalculation:
         metrics = []
         # Get metrics at bag level
         for bag in bags:
+            robot_name = self._get_robot_name(bag)
+            print(f"Computing metrics for {robot_name}")
             try:
                 time_dict: dict = self._metric_calculation_driver.iterate_messages(bag)
                 computed_metrics: List[dict] = self._metric_calculation_driver.compute(bag)
@@ -140,9 +160,9 @@ class MetricsCalculation:
                 for metric_type, metric_value in computed_metric.items():
                     metric_obj: Metric = Metric(
                         metric_name=metric_type,
-                        value=float(metric_value),
+                        value=metric_value,
                         bag_file_name=bag,
-                        robot_name="test_robot",
+                        robot_name=robot_name,
                         start_time=time_dict["start_time"],
                         end_time=time_dict["end_time"],
                     )
@@ -212,12 +232,9 @@ class MetricCalculationDriver:
 class IndividualMetricCalculation:
 
     def __init__(self) -> None:
-        pass
+        self._topics_to_parse : List = []
 
     def collate_messages(self) -> None:
-        raise NotImplementedError("Subclasses must implement this method")
-
-    def topics_to_parse(self) -> List[str]:
         raise NotImplementedError("Subclasses must implement this method")
 
     def compute(self) -> dict:
@@ -225,3 +242,6 @@ class IndividualMetricCalculation:
 
     def ros_message_class(self):
         raise NotImplementedError("Subclasses must implement this method")
+
+    def topics_to_parse(self) -> List[str]:
+        return self._topics_to_parse

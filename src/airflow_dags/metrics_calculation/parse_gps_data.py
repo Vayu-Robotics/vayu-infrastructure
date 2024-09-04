@@ -74,8 +74,7 @@ class CalculateMileage(IndividualMetricCalculation):
         total_distance = np.sum(np.power(np.sum(diff * diff, axis=1), 0.5))
         return total_distance
 
-    def topics_to_parse(self) -> List[str]:
-        return self._topics_to_parse
+
 
     def ros_message_class(self):
         return ["NavSatFix", "nav_msgs/msg/NavSatFix"]
@@ -111,17 +110,12 @@ class CalculateMileage(IndividualMetricCalculation):
             total_distance = self._calculate_total_distance(reduced_gps_points)
             print(f"Total accumulated distance: {total_distance:.2f} m")
             print(f"Total duration: {total_duration:.2f} s")
-            stats["mileage"] = total_distance
+            stats["mileage"] = float(total_distance)
         except Exception as e:
             print(e)
 
         print("Statistics:")
         print("-" * 80)
-        print(
-            "{:<50} {:>10} {:>10}".format(
-                "mcap_file", "total_duration", "total_distance"
-            )
-        )
 
         return stats
 
