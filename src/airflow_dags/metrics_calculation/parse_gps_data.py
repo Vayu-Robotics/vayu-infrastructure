@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-from argparse import ArgumentParser
 from dataclasses import dataclass
 from math import isnan
 from pathlib import Path
@@ -19,6 +18,7 @@ from typing import List
 
 VELOCITY_FILTER_THRESH : float = 1.5
 AUTONOMY_MODE : int = 4
+M_TO_MILES_FACTOR : float = 0.000621371
 
 @dataclass
 class GpsMessage:
@@ -69,7 +69,7 @@ class CalculateMileage(IndividualMetricCalculation):
         total_distance : float = 0.0
         for gps_points_window in gps_points:
             total_distance += self._calculate_distance_for_window(gps_points_window)
-        return total_distance
+        return total_distance * M_TO_MILES_FACTOR
 
     def _calculate_distance_for_window(self, gps_points_window) -> float:
         utms = [utm.from_latlon(gps[0], gps[1]) for gps in gps_points_window]

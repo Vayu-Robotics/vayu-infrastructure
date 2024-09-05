@@ -72,7 +72,7 @@ class MetricsCalculation:
         )
 
         create_table_query = """
-        CREATE TABLE IF NOT EXISTS test_robots_ts_with_au_1 (
+        CREATE TABLE IF NOT EXISTS demo_table (
             uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             robot_name VARCHAR(100),
             bag_name VARCHAR(10000) UNIQUE,
@@ -125,7 +125,7 @@ class MetricsCalculation:
                 #     (metric.robot_name, metric.bag_file_name, metric.value, metric.start_time, metric.end_time),
                 # )
                 query = f"""
-                    INSERT INTO test_robots_ts_with_au_1 (robot_name, bag_name, {metric.metric_name}, start_time, end_time)
+                    INSERT INTO demo_table (robot_name, bag_name, {metric.metric_name}, start_time, end_time)
                     VALUES (%s, %s, %s, %s, %s)
                     ON CONFLICT (bag_name) 
                     DO UPDATE SET

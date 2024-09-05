@@ -44,7 +44,7 @@ COPY requirements.txt /lib/requirements.txt
 
 # Install other requirements
 RUN pip3 install --use-deprecated=legacy-resolver -r /lib/requirements.txt
-RUN ln -snf /usr/share/zoneinfo/UTC /etc/localtime && echo "UTC" > /etc/timezone
+RUN ln -snf /usr/share/zoneinfo/America/Los_Angeles /etc/localtime && echo "America/Los_Angeles" > /etc/timezone
 
 # Postgres environment variables
 ENV POSTGRES_DB=robot_db \
