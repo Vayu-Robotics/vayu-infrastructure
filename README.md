@@ -7,7 +7,9 @@
     Change platform to amd64 for x86 platform.
 2. We need to set the right permissions for postgres to persist the database.
 ```sudo chown -R 999:999 ./pgdata```
-3. Bring up: ```docker-compose up```
+3. Bring up
+    - On robot and dev: ```docker compose -f docker-compose.robot.yml up -d ```
+    - On central unit: ```docker compose -f docker-compose.yml up```
 
 
 # Instructions for accessing the database
