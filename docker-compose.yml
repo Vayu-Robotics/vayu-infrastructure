@@ -1,5 +1,5 @@
 version: '3.8'
-
+# TODO: Add password to environment variables
 services:
   airflow:
     image: vayurobotics/vayu-infrastructure

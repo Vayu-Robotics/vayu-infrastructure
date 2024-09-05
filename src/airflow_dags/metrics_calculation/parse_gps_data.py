@@ -16,7 +16,7 @@ from tqdm import tqdm
 from typing import List
 
 
-VELOCITY_FILTER_THRESH : float = 1.5
+VELOCITY_FILTER_THRESH : float = 0.1
 AUTONOMY_MODE : int = 4
 M_TO_MILES_FACTOR : float = 0.000621371
 

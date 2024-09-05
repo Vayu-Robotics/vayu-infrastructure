@@ -21,7 +21,8 @@ default_args = {
 }
 
 BASE_BAG_DIR = "/data/nas0/data_collects/rosbags"
-PRODUCTION_BAG_DIRS = [os.path.join(BASE_BAG_DIR, "infrastructure-test")]
+PRODUCTION_BAG_DIRS = [os.path.join(BASE_BAG_DIR, "djarin-4")]
+#TODO(arul): add support for new bag directories
 SYNC_DATA_FILE = "/data/nas0/data_collects/rosbags/sync_data.yaml"
 
 # Function to read the last synced time from a YAML file
@@ -35,7 +36,7 @@ def read_last_synced_time(file_path='sync_data.yaml'):
                 return datetime.fromisoformat(last_synced_time_str).astimezone(pytz.UTC)
     except FileNotFoundError:
         print("Sync data file not found. Assuming this is the first sync.")
-    return None
+    return datetime(2024, 9, 1, tzinfo=pytz.UTC)
 
 # Function to get all directories newer than the last synced time from multiple base paths
 def get_new_directories(base_paths, sync_file='sync_data.yaml'):
@@ -67,8 +68,8 @@ def get_new_directories(base_paths, sync_file='sync_data.yaml'):
                         for mcap_file in mcap_files:
                             print(f"MCAP file found: {mcap_file}")
                             mcap_files_list.append(mcap_file)
-                        else:
-                            print(f"Base path '{base_path}' does not exist or is not a directory.")
+        else:
+            print(f"Base path '{base_path}' does not exist or is not a directory.")
 
     # Return the list of new directories
     print(f"New files found: {mcap_files}")
@@ -114,6 +115,7 @@ with DAG(
             metrics_calculator = MetricsCalculation(test_config)
             metrics = metrics_calculator.compute_metrics(new_directories)
             print(f"Metrics computed: {metrics}")
+            # TODO: Write the metrics per bag to the database
             metrics_calculator.write_metrics_to_db(metrics)
             print("Updated the database!!")
         else:

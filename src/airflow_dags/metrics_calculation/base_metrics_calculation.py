@@ -53,6 +53,7 @@ class MetricsCalculation:
         # metric_class should be a subclass of BaseMetricCalculation
         self.metric_class_dict = metric_class_dict
         self._metric_calculation_driver = MetricCalculationDriver(metric_class_dict)
+        self._bag_metrics_table = "bag_metrics_table"
         self._init_database()
         
     
@@ -74,8 +75,8 @@ class MetricsCalculation:
         )
         print(f"Connecting to database: {self._conn_str}")
 
-        create_table_query = """
-        CREATE TABLE IF NOT EXISTS demo_table (
+        create_table_query = f"""
+        CREATE TABLE IF NOT EXISTS {self._bag_metrics_table} (
             uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             robot_name VARCHAR(100),
             bag_name VARCHAR(10000) UNIQUE,
@@ -84,7 +85,7 @@ class MetricsCalculation:
             data_sync TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             start_time TIMESTAMP,
             end_time TIMESTAMP,
-            disengagements TIMESTAMP[] DEFAULT '{}'
+            disengagements TIMESTAMP[] DEFAULT '{{}}'
         );
         """
         try:
@@ -126,7 +127,7 @@ class MetricsCalculation:
                 #     (metric.robot_name, metric.bag_file_name, metric.value, metric.start_time, metric.end_time),
                 # )
                 query = f"""
-                    INSERT INTO demo_table (robot_name, bag_name, {metric.metric_name}, start_time, end_time)
+                    INSERT INTO {self._bag_metrics_table} (robot_name, bag_name, {metric.metric_name}, start_time, end_time)
                     VALUES (%s, %s, %s, %s, %s)
                     ON CONFLICT (bag_name) 
                     DO UPDATE SET
@@ -221,7 +222,7 @@ class MetricCalculationDriver:
         bag_iterator = self.get_bag_iterator(mcap_file)
         print(f"Reading {self.topics_to_parse} from {mcap_file}")
         try:
-            for msg in tqdm(bag_iterator):
+            for msg in bag_iterator:
 
                 current_msg = msg.ros_msg
                 if start_time is None:
@@ -236,8 +237,8 @@ class MetricCalculationDriver:
 
             end_time = current_time
             return {"start_time": start_time, "end_time": end_time}
-        except OverflowError:
-            print("Overflow error occured while trying to read the messages.")
+        except (OverflowError, ValueError):
+            print("Error occured while trying to read the messages.")
             return None
 
 
