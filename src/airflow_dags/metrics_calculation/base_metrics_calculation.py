@@ -19,6 +19,7 @@ import datetime
 # Note all the errors which should lead to the `calculate metrics node to crash` should
 # have unhandled excpetions.
 
+
 class MetricsCalculationErrorException(Exception):
     def __init__(self, message="An error occured while trying to compute the metric."):
         self.message = message
@@ -41,9 +42,23 @@ class Metric:
     robot_name: str
     start_time: datetime = None
     end_time: datetime = None
+    bag_corrupted: bool = False
 
     def __str__(self):
         return f"Metric: {self.metric_name}, Value: {self.value}, Bag: {self.bag_file_name}, Robot: {self.robot_name}, Start Time: {self.start_time}, End Time: {self.end_time}"
+
+
+def get_corrupted_bag_metric(bag_name: str) -> Metric:
+
+    return Metric(
+        metric_name="mileage",
+        value=0.0,
+        bag_file_name=bag_name,
+        robot_name="corrupted_robot",
+        start_time=datetime.datetime.now(),
+        end_time=datetime.datetime.now(),
+        bag_corrupted=True,
+    )
 
 
 class MetricsCalculation:
@@ -55,10 +70,9 @@ class MetricsCalculation:
         self._metric_calculation_driver = MetricCalculationDriver(metric_class_dict)
         self._bag_metrics_table = "bag_metrics_table"
         self._init_database()
-        
-    
+
     def _get_robot_name(self, bag_file_name: str) -> str:
-        """ TODO: Is there a better way to get the robot name from the bag file name? """
+        """TODO: Is there a better way to get the robot name from the bag file name?"""
         return bag_file_name.split("/")[5]
 
     def _init_database(self):
@@ -86,6 +100,7 @@ class MetricsCalculation:
             start_time TIMESTAMP,
             end_time TIMESTAMP,
             disengagements TIMESTAMP[] DEFAULT '{{}}'
+            bag_corrupted BOOLEAN DEFAULT FALSE
         );
         """
         try:
@@ -127,18 +142,27 @@ class MetricsCalculation:
                 #     (metric.robot_name, metric.bag_file_name, metric.value, metric.start_time, metric.end_time),
                 # )
                 query = f"""
-                    INSERT INTO {self._bag_metrics_table} (robot_name, bag_name, {metric.metric_name}, start_time, end_time)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO {self._bag_metrics_table} (robot_name, bag_name, {metric.metric_name}, start_time, end_time, bag_corrupted)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     ON CONFLICT (bag_name) 
                     DO UPDATE SET
                         robot_name = EXCLUDED.robot_name,
                         {metric.metric_name} = EXCLUDED.{metric.metric_name},
                         start_time = EXCLUDED.start_time,
-                        end_time = EXCLUDED.end_time;
+                        end_time = EXCLUDED.end_time,
+                        bag_corrupted = EXCLUDED.bag_corrupted;
                 """
+                # breakpoint()
                 cur.execute(
                     query,
-                    (metric.robot_name, metric.bag_file_name, metric.value, metric.start_time, metric.end_time)
+                    (
+                        metric.robot_name,
+                        metric.bag_file_name,
+                        metric.value,
+                        metric.start_time,
+                        metric.end_time,
+                        metric.bag_corrupted,
+                    ),
                 )
                 conn.commit()
             except Exception as e:
@@ -155,15 +179,18 @@ class MetricsCalculation:
             robot_name = self._get_robot_name(bag)
             print(f"Computing metrics for {robot_name}")
             try:
-                time_dict: Optional[dict] = self._metric_calculation_driver.iterate_messages(bag)
-                computed_metrics: List[dict] = self._metric_calculation_driver.compute(bag)
+                time_dict: Optional[dict] = (
+                    self._metric_calculation_driver.iterate_messages(bag)
+                )
+                if time_dict is None:
+                    metrics.append(get_corrupted_bag_metric(bag))
+                    continue
+                else:
+                    computed_metrics: List[dict] = (
+                        self._metric_calculation_driver.compute(bag)
+                    )
             except:
-                raise MetricsCalculationErrorException()
-
-            # TODO: We need to persist this in the db. Add a column marking bag corruption to the db.
-            if time_dict is None or computed_metrics is None:
-                print("Error parsing the bag file.")
-                continue
+                raise MetricsCalculationErrorException()  # TODO: We need to persist this in the db. Add a column marking bag corruption to the db.
 
             for computed_metric in computed_metrics:
                 for metric_type, metric_value in computed_metric.items():
@@ -209,7 +236,7 @@ class MetricCalculationDriver:
         return self._topics_to_parse
 
     def compute(self, mcap_file: str) -> List[dict]:
-        
+
         computed_metrics = []
         for metric_class in self._metric_class_to_topics.keys():
             computed_metrics.append(metric_class.compute(mcap_file))
@@ -229,23 +256,28 @@ class MetricCalculationDriver:
                     start_time = datetime.datetime.fromtimestamp(
                         current_msg.header.stamp.sec
                     )
-                current_time = datetime.datetime.fromtimestamp(current_msg.header.stamp.sec)
+                current_time = datetime.datetime.fromtimestamp(
+                    current_msg.header.stamp.sec
+                )
 
                 for metric_class in self._metric_class_to_topics.keys():
-                    if current_msg.__class__.__name__ in self._metric_class_to_ros_message_class[metric_class]:
+                    if (
+                        current_msg.__class__.__name__
+                        in self._metric_class_to_ros_message_class[metric_class]
+                    ):
                         metric_class.collate_messages(current_msg)
 
             end_time = current_time
             return {"start_time": start_time, "end_time": end_time}
-        except (OverflowError, ValueError):
-            print("Error occured while trying to read the messages.")
+        except Exception as e:
+            print(f"Error reading bag: {e}")
             return None
 
 
 class IndividualMetricCalculation:
 
     def __init__(self) -> None:
-        self._topics_to_parse : List = []
+        self._topics_to_parse: List = []
 
     def collate_messages(self) -> None:
         raise NotImplementedError("Subclasses must implement this method")
