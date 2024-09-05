@@ -61,15 +61,18 @@ class MetricsCalculation:
         return bag_file_name.split("/")[5]
 
     def _init_database(self):
-        """Initializes connection to the database."""
+        """Initializes connection to the PostgreSQL database on Elestio."""
         # Get environment variables for database credentials
         db_name = os.getenv("POSTGRES_DB")
         db_user = os.getenv("POSTGRES_USER")
         db_password = os.getenv("POSTGRES_PASSWORD")
-        db_host = os.getenv("POSTGRES_HOST", "localhost")  # default is localhost
+        db_host = os.getenv("POSTGRES_HOST")
+        db_port = os.getenv("POSTGRES_PORT")
+        
         self._conn_str = (
-            f"dbname={db_name} user={db_user} password={db_password} host={db_host}"
+            f"dbname={db_name} user={db_user} password={db_password} host={db_host} port={db_port}"
         )
+        print(f"Connecting to database: {self._conn_str}")
 
         create_table_query = """
         CREATE TABLE IF NOT EXISTS demo_table (
@@ -98,10 +101,8 @@ class MetricsCalculation:
             cur.close()
             conn.close()
 
-    def write_metrics_to_db(self, metrics: List[Metric]):
-        # Use psychopg2 to write metrics to the database
-        # Write the metric to the database
-        # Schema
+    def write_metrics_to_db(self, metrics: List):
+        """Writes metrics to the Elestio-hosted PostgreSQL database."""
         '''
         cur.execute("""
         INSERT INTO robots (robot_name, bag_name, mileage)
@@ -139,12 +140,12 @@ class MetricsCalculation:
                     (metric.robot_name, metric.bag_file_name, metric.value, metric.start_time, metric.end_time)
                 )
                 conn.commit()
-                cur.close()
-                conn.close()
-
             except Exception as e:
                 print(f"Error creating table: {e}")
                 raise MetricsCalculationDatabaseException()
+            finally:
+                cur.close()
+                conn.close()
 
     def compute_metrics(self, bags: List):
         metrics = []

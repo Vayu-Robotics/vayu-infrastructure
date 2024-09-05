@@ -8,10 +8,12 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://robot_user:robot_pass@localhost:5432/robot_db
-      - POSTGRES_USER=robot_user
-      - POSTGRES_PASSWORD=robot_pass
-      - POSTGRES_DB=robot_db
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://postgres:W8MgVPtZ-4ntJ-mW73rvxI@vayu-postgresql-u12754.vm.elestio.app:25432/vayu_data
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=W8MgVPtZ-4ntJ-mW73rvxI
+      - POSTGRES_DB=vayu_data
+      - POSTGRES_HOST=vayu-postgresql-u12754.vm.elestio.app
+      - POSTGRES_PORT=25432
       - PYTHONPATH=/src
       - STABLE_WIFI_SSID=${STABLE_WIFI_SSID}
     volumes:
