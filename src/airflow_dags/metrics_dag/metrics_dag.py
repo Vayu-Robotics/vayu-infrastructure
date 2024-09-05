@@ -5,9 +5,12 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
 import yaml
 import pytz
+import glob
 
 from airflow_dags.metrics_calculation.base_metrics_calculation import MetricsCalculation
 from airflow_dags.metrics_calculation.parse_gps_data import CalculateMileage
+from airflow_dags.metrics_calculation.calculate_disengagements import CalculateDisengagements
+
 
 # Default arguments for the DAG
 default_args = {
@@ -39,6 +42,7 @@ def get_new_directories(base_paths, sync_file='sync_data.yaml'):
     last_synced_time = read_last_synced_time(sync_file)
     print(f"Last synced time: {last_synced_time}")
     new_directories = []
+    mcap_files_list = []
     current_time = datetime.now(pytz.UTC)
 
     if not last_synced_time:
@@ -58,12 +62,17 @@ def get_new_directories(base_paths, sync_file='sync_data.yaml'):
                     if mod_time > last_synced_time:
                         print(f"New directory found: {dir_path}")
                         new_directories.append(dir_path)
-        else:
-            print(f"Base path '{base_path}' does not exist or is not a directory.")
+
+                        mcap_files = glob.glob(os.path.join(dir_path, "*.mcap"))
+                        for mcap_file in mcap_files:
+                            print(f"MCAP file found: {mcap_file}")
+                            mcap_files_list.append(mcap_file)
+                        else:
+                            print(f"Base path '{base_path}' does not exist or is not a directory.")
 
     # Return the list of new directories
-    print(f"New directories found: {new_directories}")
-    return new_directories
+    print(f"New files found: {mcap_files}")
+    return mcap_files_list
 
 def update_last_synced_time(new_time, file_path='sync_data.yaml'):
     with open(file_path, 'w') as file:
@@ -97,6 +106,7 @@ with DAG(
     def run_metrics_on_bags(**kwargs):
         test_config = {
             "mileage": CalculateMileage(),
+            "disengagements": CalculateDisengagements(),
         }
 
         new_directories = kwargs['ti'].xcom_pull(task_ids='find_new_directories')

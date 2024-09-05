@@ -7,7 +7,7 @@
 
 from math import isnan
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Optional
 import os
 from mcap.reader import make_reader
 from mcap_ros2.reader import read_ros2_messages
@@ -153,10 +153,16 @@ class MetricsCalculation:
             robot_name = self._get_robot_name(bag)
             print(f"Computing metrics for {robot_name}")
             try:
-                time_dict: dict = self._metric_calculation_driver.iterate_messages(bag)
+                time_dict: Optional[dict] = self._metric_calculation_driver.iterate_messages(bag)
                 computed_metrics: List[dict] = self._metric_calculation_driver.compute(bag)
             except:
                 raise MetricsCalculationErrorException()
+
+            # TODO: We need to persist this in the db. Add a column marking bag corruption to the db.
+            if time_dict is None or computed_metrics is None:
+                print("Error parsing the bag file.")
+                continue
+
             for computed_metric in computed_metrics:
                 for metric_type, metric_value in computed_metric.items():
                     metric_obj: Metric = Metric(
@@ -207,27 +213,31 @@ class MetricCalculationDriver:
             computed_metrics.append(metric_class.compute(mcap_file))
         return computed_metrics
 
-    def iterate_messages(self, mcap_file) -> dict:
+    def iterate_messages(self, mcap_file) -> Optional[dict]:
 
         start_time: datetime = None
         end_time: datetime = None
         bag_iterator = self.get_bag_iterator(mcap_file)
         print(f"Reading {self.topics_to_parse} from {mcap_file}")
-        for msg in tqdm(bag_iterator):
+        try:
+            for msg in tqdm(bag_iterator):
 
-            current_msg = msg.ros_msg
-            if start_time is None:
-                start_time = datetime.datetime.fromtimestamp(
-                    current_msg.header.stamp.sec
-                )
-            current_time = datetime.datetime.fromtimestamp(current_msg.header.stamp.sec)
+                current_msg = msg.ros_msg
+                if start_time is None:
+                    start_time = datetime.datetime.fromtimestamp(
+                        current_msg.header.stamp.sec
+                    )
+                current_time = datetime.datetime.fromtimestamp(current_msg.header.stamp.sec)
 
-            for metric_class in self._metric_class_to_topics.keys():
-                if current_msg.__class__.__name__ in self._metric_class_to_ros_message_class[metric_class]:
-                    metric_class.collate_messages(current_msg)
+                for metric_class in self._metric_class_to_topics.keys():
+                    if current_msg.__class__.__name__ in self._metric_class_to_ros_message_class[metric_class]:
+                        metric_class.collate_messages(current_msg)
 
-        end_time = current_time
-        return {"start_time": start_time, "end_time": end_time}
+            end_time = current_time
+            return {"start_time": start_time, "end_time": end_time}
+        except OverflowError:
+            print("Overflow error occured while trying to read the messages.")
+            return None
 
 
 class IndividualMetricCalculation:

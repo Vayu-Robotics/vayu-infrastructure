@@ -25,4 +25,4 @@ services:
     entrypoint: /entrypoint.sh
     tty: true
     privileged: true
-    network_mode: "host"
+    # network_mode: "host"
