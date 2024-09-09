@@ -68,12 +68,16 @@ class MetricsCalculation:
         # metric_class should be a subclass of BaseMetricCalculation
         self.metric_class_dict = metric_class_dict
         self._metric_calculation_driver = MetricCalculationDriver(metric_class_dict)
-        self._bag_metrics_table = "bag_metrics_table"
+        self._bag_metrics_table = "bag_metrics_table_1"
         self._init_database()
 
     def _get_robot_name(self, bag_file_name: str) -> str:
         """TODO: Is there a better way to get the robot name from the bag file name?"""
-        return bag_file_name.split("/")[5]
+        try:
+            return bag_file_name.split("/")[5]
+        except:
+            return "unknown_robot"
+        
 
     def _init_database(self):
         """Initializes connection to the PostgreSQL database on Elestio."""
@@ -99,7 +103,7 @@ class MetricsCalculation:
             data_sync TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             start_time TIMESTAMP,
             end_time TIMESTAMP,
-            disengagements TIMESTAMP[] DEFAULT '{{}}'
+            disengagements TIMESTAMP[] DEFAULT '{{}}',
             bag_corrupted BOOLEAN DEFAULT FALSE
         );
         """

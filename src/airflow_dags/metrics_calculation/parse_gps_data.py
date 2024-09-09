@@ -19,6 +19,7 @@ from typing import List
 VELOCITY_FILTER_THRESH : float = 0.1
 AUTONOMY_MODE : int = 4
 M_TO_MILES_FACTOR : float = 0.000621371
+GPS_COVARIANCE_TOLERANCE : float = 10.0
 
 @dataclass
 class GpsMessage:
@@ -48,21 +49,24 @@ class CalculateMileage(IndividualMetricCalculation):
     def _get_reduced_messages(self, gps_message_group : List) -> List:
         reduced_gps_points = []
         for gps_message_window in gps_message_group:
-            utms = [
-                utm.from_latlon(gps_message.latitude, gps_message.longitude)
-                for gps_message in gps_message_window
-            ]
-            utm_zone = utms[0][2]
-            utm_letter = utms[0][3]
-            utm_points = [(utm[0], utm[1]) for utm in utms]
-            # create rdp with the utm points with 50 cm tolerance
-            rdp_points = rdp.rdp(utm_points, epsilon=0.5)
-            print(f"Reduced {len(utm_points)} points to {len(rdp_points)} points using RDP")
-            # convert utm to gps
-            reduced_gps_points.append([
-                utm.to_latlon(utm_point[0], utm_point[1], utm_zone, utm_letter)
-                for utm_point in rdp_points
-            ])
+            try:
+                utms = [
+                    utm.from_latlon(gps_message.latitude, gps_message.longitude)
+                    for gps_message in gps_message_window
+                ]
+                utm_zone = utms[0][2]
+                utm_letter = utms[0][3]
+                utm_points = [(utm[0], utm[1]) for utm in utms]
+                # create rdp with the utm points with 50 cm tolerance
+                rdp_points = rdp.rdp(utm_points, epsilon=0.5)
+                print(f"Reduced {len(utm_points)} points to {len(rdp_points)} points using RDP")
+                # convert utm to gps
+                reduced_gps_points.append([
+                    utm.to_latlon(utm_point[0], utm_point[1], utm_zone, utm_letter)
+                    for utm_point in rdp_points
+                ])
+            except Exception as e:
+                print(f"Couldnt process message {gps_message_window}")
         return reduced_gps_points
 
     def _calculate_total_distance(self, gps_points) -> float:
@@ -78,6 +82,12 @@ class CalculateMileage(IndividualMetricCalculation):
         total_distance = np.sum(np.power(np.sum(diff * diff, axis=1), 0.5))
         return total_distance
 
+    def _clear_current_queue_and_append_messages(self, current_window : List, message_group : List[List]):
+        """ Appends `current_window` to the `message_group` and clear the current queue.
+        """
+        if len(current_window) > 0:
+            message_group.append(current_window)
+            current_window = []
 
     def ros_message_class(self):
         return ["NavSatFix", "nav_msgs/msg/NavSatFix", "Odometry", "OperationalMode"]
@@ -99,18 +109,13 @@ class CalculateMileage(IndividualMetricCalculation):
         if self._current_speed < VELOCITY_FILTER_THRESH:
             # Append the current window to the list of gps messages
             # if the window is not empty
-            if len(self._current_gps_message_window) > 0:
-                self._gps_messages.append(self._current_gps_message_window)
-                self._current_gps_message_window = []
-            
-            if len(self._current_auto_gps_message_window) > 0:
-                self._autonomy_gps_messages.append(self._current_auto_gps_message_window)
-                self._current_auto_gps_message_window = []
+            self._clear_current_queue_and_append_messages(self._current_gps_message_window, self._gps_messages)
+            self._clear_current_queue_and_append_messages(self._current_auto_gps_message_window, self._autonomy_gps_messages)
             return
 
         
         # skip large covariance values
-        if message.position_covariance[0] > 10.0:
+        if message.position_covariance[0] > GPS_COVARIANCE_TOLERANCE:
             return
 
         # skip NaN messages
@@ -129,9 +134,7 @@ class CalculateMileage(IndividualMetricCalculation):
         
         if self._current_operational_mode != AUTONOMY_MODE:
             # If the autonomy is not engaged close the window
-            if len(self._current_auto_gps_message_window) > 0:
-                self._autonomy_gps_messages.append(self._current_auto_gps_message_window)
-                self._current_auto_gps_message_window = []
+            self._clear_current_queue_and_append_messages(self._current_auto_gps_message_window, self._autonomy_gps_messages)
             return
         
         self._current_auto_gps_message_window.append(
@@ -149,15 +152,19 @@ class CalculateMileage(IndividualMetricCalculation):
         Compute mileage from mcap bags
         """
         stats = {}
+        print(f"Computing metrics for {mcap_file}")
+        # Append the last window to the list of gps messages
+        self._clear_current_queue_and_append_messages(self._current_gps_message_window, self._gps_messages)
+        self._clear_current_queue_and_append_messages(self._current_auto_gps_message_window, self._autonomy_gps_messages)
         metric_raw_data_hashmap : dict = {
             "mileage": self._gps_messages,
-            "autonomy_mileage": self._autonomy_gps_messages
+            "autonomy_mileage": self._autonomy_gps_messages,
         }
         try:
             for metric, gps_message_group in metric_raw_data_hashmap.items():
                 reduced_gps_points = self._get_reduced_messages(gps_message_group)
                 total_distance = self._calculate_total_distance(reduced_gps_points)
-                print(f"Total accumulated distance for : {metric} : {total_distance:.2f} m")
+                print(f"Value for : {metric} : {total_distance:.2f} m")
                 stats[metric] = float(total_distance)
         except Exception as e:
             print(e)
@@ -166,6 +173,4 @@ class CalculateMileage(IndividualMetricCalculation):
                 "autonomy_mileage": 0.0
             }
 
-        print("Statistics:")
-        print("-" * 80)
         return stats
