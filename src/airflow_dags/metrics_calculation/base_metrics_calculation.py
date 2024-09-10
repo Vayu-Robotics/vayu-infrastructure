@@ -253,7 +253,7 @@ class MetricCalculationDriver:
         bag_iterator = self.get_bag_iterator(mcap_file)
         print(f"Reading {self.topics_to_parse} from {mcap_file}")
         try:
-            for msg in bag_iterator:
+            for msg in tqdm(bag_iterator):
 
                 current_msg = msg.ros_msg
                 if start_time is None:

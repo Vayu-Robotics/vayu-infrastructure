@@ -16,6 +16,7 @@ services:
       - STABLE_WIFI_SSID=${STABLE_WIFI_SSID}
       - TZ=America/Los_Angeles  # Set timezone to Pacific Time (PDT/PST)
       - AIRFLOW__WEBSERVER__AUTHENTICATE=False
+      - POSTGRES_PORT=5432
       - AIRFLOW__WEBSERVER__AUTH_BACKEND=airflow.api.auth.backend.default   
     volumes:
       - ./src/airflow_dags/:/usr/local/airflow/dags

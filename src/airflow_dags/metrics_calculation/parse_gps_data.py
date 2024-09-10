@@ -59,7 +59,6 @@ class CalculateMileage(IndividualMetricCalculation):
                 utm_points = [(utm[0], utm[1]) for utm in utms]
                 # create rdp with the utm points with 50 cm tolerance
                 rdp_points = rdp.rdp(utm_points, epsilon=0.5)
-                print(f"Reduced {len(utm_points)} points to {len(rdp_points)} points using RDP")
                 # convert utm to gps
                 reduced_gps_points.append([
                     utm.to_latlon(utm_point[0], utm_point[1], utm_zone, utm_letter)
@@ -86,8 +85,8 @@ class CalculateMileage(IndividualMetricCalculation):
         """ Appends `current_window` to the `message_group` and clear the current queue.
         """
         if len(current_window) > 0:
-            message_group.append(current_window)
-            current_window = []
+            message_group.append(current_window.copy())
+            current_window.clear()
 
     def ros_message_class(self):
         return ["NavSatFix", "nav_msgs/msg/NavSatFix", "Odometry", "OperationalMode"]
