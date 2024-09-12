@@ -57,7 +57,7 @@ class CalculateDisengagements(IndividualMetricCalculation):
         for operational_mode_message in self._operational_mode_messages:
             if self._has_autonomy_disengaged(operational_mode_message.operational_mode):
                 self._disengagements.append(operational_mode_message.timestamp)
-        
+        self._operational_mode_messages.clear()
         return { "disengagements": self._disengagements }
 
 

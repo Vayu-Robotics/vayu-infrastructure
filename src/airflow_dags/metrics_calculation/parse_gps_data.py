@@ -161,6 +161,7 @@ class CalculateMileage(IndividualMetricCalculation):
         }
         try:
             for metric, gps_message_group in metric_raw_data_hashmap.items():
+                print(f"Total groups :: {len(gps_message_group)}")
                 reduced_gps_points = self._get_reduced_messages(gps_message_group)
                 total_distance = self._calculate_total_distance(reduced_gps_points)
                 print(f"Value for : {metric} : {total_distance:.2f} m")
@@ -171,5 +172,8 @@ class CalculateMileage(IndividualMetricCalculation):
                 "mileage": 0.0,
                 "autonomy_mileage": 0.0
             }
+
+        self._gps_messages.clear()
+        self._autonomy_gps_messages.clear()
 
         return stats

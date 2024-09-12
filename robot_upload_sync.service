@@ -1,0 +1,10 @@
+[Unit]
+Description=Service to automate data upload and cleanup.
+After=network.target
+
+[Service]
+ExecStart=/code/vayu-infrastructure/launch_vayu_infrastructure_robot.sh
+WorkingDirectory=/code/vayu-infrastructure/
+User=vayu
+Group=vayu
+

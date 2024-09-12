@@ -21,7 +21,7 @@ default_args = {
 }
 
 BASE_BAG_DIR = "/data/nas0/data_collects/rosbags"
-PRODUCTION_BAG_DIRS = [os.path.join(BASE_BAG_DIR, "djarin-4")]
+PRODUCTION_BAG_DIRS = [os.path.join(BASE_BAG_DIR, "djarin-3"), os.path.join(BASE_BAG_DIR, "djarin-4")]
 #TODO(arul): add support for new bag directories
 SYNC_DATA_FILE = "/data/nas0/data_collects/rosbags/sync_data.yaml"
 

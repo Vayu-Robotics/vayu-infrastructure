@@ -68,7 +68,7 @@ class MetricsCalculation:
         # metric_class should be a subclass of BaseMetricCalculation
         self.metric_class_dict = metric_class_dict
         self._metric_calculation_driver = MetricCalculationDriver(metric_class_dict)
-        self._bag_metrics_table = "bag_metrics_table_1"
+        self._bag_metrics_table = "bag_metrics_table_v1"
         self._init_database()
 
     def _get_robot_name(self, bag_file_name: str) -> str:
