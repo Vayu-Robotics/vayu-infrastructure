@@ -53,7 +53,7 @@ with DAG(
     # Task 3: Delete local folder after sync
     delete_local_folder = BashOperator(
         task_id='delete_local_folder',
-        bash_command='rm -rf /data/collects/dummy',
+        bash_command='rm -rf /data/collects/*',
     )
 
     # Define the order of execution
