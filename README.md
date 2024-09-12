@@ -22,3 +22,6 @@
 - List all tables: ``\dt``
 - Select entries at time of interest: ``SELECT * FROM your_table WHERE start_time BETWEEN '2024-09-01 00:00:00' AND '2024-09-01 23:59:59';``
 
+# Deployment
+1. Robot
+- Run ```deploy_vayu_infrastructure.sh```
