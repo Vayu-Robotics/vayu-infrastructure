@@ -177,3 +177,9 @@ class CalculateMileage(IndividualMetricCalculation):
         self._autonomy_gps_messages.clear()
 
         return stats
+
+    def clear(self) -> None:
+        self._gps_messages.clear()
+        self._autonomy_gps_messages.clear()
+        self._current_gps_message_window = []
+        self._current_auto_gps_message_window = []

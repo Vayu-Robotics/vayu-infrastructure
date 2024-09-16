@@ -244,6 +244,8 @@ class MetricCalculationDriver:
         computed_metrics = []
         for metric_class in self._metric_class_to_topics.keys():
             computed_metrics.append(metric_class.compute(mcap_file))
+            # Clear the messages in the metric class
+            metric_class.clear()
         return computed_metrics
 
     def iterate_messages(self, mcap_file) -> Optional[dict]:
@@ -294,3 +296,6 @@ class IndividualMetricCalculation:
 
     def topics_to_parse(self) -> List[str]:
         return self._topics_to_parse
+
+    def clear(self) -> None:
+        raise NotImplementedError("Subclasses must implement this method")
