@@ -29,4 +29,5 @@ services:
     entrypoint: /entrypoint.sh
     tty: true
     privileged: true
+    restart: on-failure
     network_mode: "host"
