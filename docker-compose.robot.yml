@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  airflow:
+    image: vayurobotics/vayu-infrastructure
+    container_name: vayu-infrastructure
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://robot_user:robot_pass@localhost:5432/robot_db
+      - POSTGRES_USER=robot_user
+      - POSTGRES_PASSWORD=robot_pass
+      - POSTGRES_DB=robot_db
+      - PYTHONPATH=/src
+      - STABLE_WIFI_SSID=${STABLE_WIFI_SSID}
+      - TZ=America/Los_Angeles  # Set timezone to Pacific Time (PDT/PST)
+      - AIRFLOW__WEBSERVER__AUTHENTICATE=False
+      - POSTGRES_PORT=5432
+      - AIRFLOW__WEBSERVER__AUTH_BACKEND=airflow.api.auth.backend.default   
+    volumes:
+      - ./src/airflow_dags/:/usr/local/airflow/dags
+      - /data:/data
+      - ./pgdata:/data/pgdata
+      - ./src/:/src
+    ports:
+      - "8080:8080"
+      - "5432:5432"
+    entrypoint: /entrypoint.sh
+    tty: true
+    privileged: true
+    restart: on-failure
+    network_mode: "host"

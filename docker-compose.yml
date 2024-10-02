@@ -1,0 +1,29 @@
+version: '3.8'
+# TODO: Add password to environment variables
+services:
+  airflow:
+    image: vayurobotics/vayu-infrastructure
+    container_name: vayu-infrastructure
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://postgres:W8MgVPtZ-4ntJ-mW73rvxI@vayu-postgresql-u12754.vm.elestio.app:25432/vayu_data
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=W8MgVPtZ-4ntJ-mW73rvxI
+      - POSTGRES_DB=vayu_data
+      - POSTGRES_HOST=vayu-postgresql-u12754.vm.elestio.app
+      - POSTGRES_PORT=25432
+      - PYTHONPATH=/src
+      - STABLE_WIFI_SSID=${STABLE_WIFI_SSID}
+    volumes:
+      - ./src/airflow_dags/:/usr/local/airflow/dags
+      - /data:/data
+      - ./pgdata:/data/nas0/infrastructure/pgdata
+      - ./src/:/src
+    ports:
+      - "8081:8080"
+    entrypoint: /entrypoint.sh
+    tty: true
+    privileged: true
+    # network_mode: "host"
